@@ -7,7 +7,7 @@
 
 This project was developed as a core component for a medical rehabilitation wearable, enabling precise remote diagnosis of patient limb movements.
 
-## 🚀 Key Features
+## Key Features
 
 * **Deep Sensor Fusion:** Replaces standard Extended Kalman Filters (EKF) with a data-driven Bi-LSTM model to map raw inertial data to global orientation.
 * **Drift Reduction:** Achieves significant reduction in orientation drift compared to double integration methods.
@@ -17,7 +17,7 @@ This project was developed as a core component for a medical rehabilitation wear
     * **Custom Data Loaders:** Efficient handling of sliding window time-series data.
     * **Visualization Tools:** Built-in utilities to plot predicted vs. ground truth trajectories (Roll/Pitch/Yaw).
 
-## 🛠️ Installation
+##  Installation
 
 1.  **Clone the repository**
     ```bash
@@ -31,7 +31,7 @@ This project was developed as a core component for a medical rehabilitation wear
     pip install -r requirements.txt
     ```
 
-## 📂 Project Structure
+## Project Structure
 
 ├── config.yaml # Hyperparameters (Batch size, LR, Window size) 
 ├── model.py # Bi-LSTM Neural Network Architecture 
@@ -43,7 +43,7 @@ This project was developed as a core component for a medical rehabilitation wear
 └── plot_utils.py # Visualization tools for trajectories
 
 
-## ⚙️ Configuration (`config.yaml`)
+## Configuration (`config.yaml`)
 
 Control the training dynamics by editing `config.yaml`:
 
@@ -59,7 +59,7 @@ data:
   input_dim: 6       # 3 Accel + 3 Gyro
 ```
 
-  🏃 Usage
+  Usage
 1. Training the Model
 To train the model on your dataset, run:
 python train.py --config config.yaml
@@ -72,6 +72,6 @@ python eval.py --model_path checkpoints/best_model.pth --input data/test_sequenc
 
 This will generate trajectory plots comparing the Predicted Orientation vs. Ground Truth.
 
-🧠 Model Architecture
+ Model Architecture
 The core model is a Recurrent Neural Network (RNN) specifically designed for sequence-to-sequence regression:
 
