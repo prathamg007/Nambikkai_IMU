@@ -1,4 +1,4 @@
-# Nambikkai IMU: Deep Learning Based 6-DoF Motion Capture
+Deep Learning Based 6-DoF Motion Capture
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Framework](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org/)
