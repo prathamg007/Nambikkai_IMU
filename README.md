@@ -33,7 +33,8 @@ This project was developed as a core component for a medical rehabilitation wear
 
 ## Project Structure
 
-├── config.yaml # Hyperparameters (Batch size, LR, Window size) 
+├── config.yaml # Hyperparameters (Batch size, LR, Window size)
+
 ├── model.py # Bi-LSTM Neural Network Architecture 
 ├── train.py # Main training loop 
 ├── eval.py # Inference and evaluation script 
