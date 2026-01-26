@@ -36,11 +36,17 @@ This project was developed as a core component for a medical rehabilitation wear
 ├── config.yaml # Hyperparameters (Batch size, LR, Window size)
 
 ├── model.py # Bi-LSTM Neural Network Architecture 
+
 ├── train.py # Main training loop 
+
 ├── eval.py # Inference and evaluation script 
+
 ├── dataset_loader_custom.py # PyTorch Dataset for windowed IMU data 
+
 ├── data_windowing.py # Preprocessing: Slicing raw data into windows 
+
 ├── loss_utils.py # Custom Quaternion Loss functions 
+
 └── plot_utils.py # Visualization tools for trajectories
 
 
