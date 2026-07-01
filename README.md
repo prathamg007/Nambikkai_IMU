@@ -1,84 +1,54 @@
-Deep Learning Based 6-DoF Motion Capture
+# Nambikkai IMU — Deep Learning 6-DoF Motion Capture
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Framework](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org/)
+Deep-learning attitude estimation for a **wearable rehabilitation device**: the system predicts unit-quaternion limb orientation directly from raw 6-DoF IMU windows (3-axis accelerometer + 3-axis gyroscope), replacing drift-prone integration and costly optical motion-capture for remote physiotherapy assessment.
 
-**Nambikkai IMU** is a robust deep learning framework designed to reconstruct high-fidelity 3D trajectories from low-cost MEMS inertial sensors. By leveraging a **Bi-directional LSTM (Bi-LSTM)** architecture, this system effectively mitigates the sensor drift and noise artifacts common in traditional integration-based tracking methods.
+Built as a Project Intern at **Nambikkai Pvt. Ltd., Chennai** (Aug–Oct 2025).
 
-This project was developed as a core component for a medical rehabilitation wearable, enabling precise remote diagnosis of patient limb movements.
+## How it works
 
-## Key Features
+1. **Sensor synchronization** (`src/dataset_loader_custom.py`) — accelerometer, gyroscope, and reference-quaternion streams arrive with independent timestamps and rates. The loader sorts and de-duplicates each stream, finds their common time overlap, infers the sampling rate, resamples everything onto a uniform grid by linear interpolation, and re-normalizes quaternions.
+2. **Windowing** (`src/data_windowing.py`) — odd-length, center-labelled sliding windows (default **101 samples, stride 10**) give the network symmetric temporal context around the labelled sample.
+3. **Model A** (`src/model.py`) — dual-branch **CNN + Bi-LSTM**: each sensor branch stacks two `GaussianNoise → Conv1D(128, k=11) → Mish → MaxPool(3) → Dropout` blocks followed by a `BiLSTM(128)`; branch embeddings are concatenated and fused with a **sampling-rate input** so one model serves devices logging at different rates. A final `Dense(4)` + L2-normalization emits a valid unit quaternion. Architecture adapted from Golroudbari & Sabour's end-to-end inertial attitude estimation framework (see `End-to-End-Deep-Learning-Framework.../CITATION.cff`), re-engineered for this custom dual-probe wearable dataset.
+4. **Loss** (`src/loss_utils.py`) — **Quaternion Multiplicative Error**: the error quaternion `q_true ⊗ conj(q_pred)` is computed with Hamilton products and the L1 norm of its vector part is minimized — a manifold-aware objective, with angular error (degrees) tracked as the metric.
+5. **Evaluation** (`src/eval.py`) — hemisphere alignment resolves the quaternion double cover (q ≡ −q) before scoring; reports mean / median / p90 angular error and dumps per-window predictions to CSV.
 
-* **Deep Sensor Fusion:** Replaces standard Extended Kalman Filters (EKF) with a data-driven Bi-LSTM model to map raw inertial data to global orientation.
-* **Drift Reduction:** Achieves significant reduction in orientation drift compared to double integration methods.
-* **Quaternion Output:** Predicts 4D Quaternion vectors directly to avoid Gimbal lock issues associated with Euler angles.
-* **Modular Pipeline:**
-    * **Config-Driven:** Fully parameterizable via `config.yaml`.
-    * **Custom Data Loaders:** Efficient handling of sliding window time-series data.
-    * **Visualization Tools:** Built-in utilities to plot predicted vs. ground truth trajectories (Roll/Pitch/Yaw).
+## Results (held-out recordings)
 
-##  Installation
+| Session | Mean err | Median | p90 | Windows |
+|---------|----------|--------|-----|---------|
+| test_1  | **0.46°** | 0.46° | 0.50° | 182 |
+| test_4  | 2.00°    | 1.79°  | 3.45° | 313 |
+| test_2  | 3.73°    | 3.63°  | 5.11° | 184 |
 
-1.  **Clone the repository**
-    ```bash
-    git clone [https://github.com/prathamg007/Nambikkai_IMU.git](https://github.com/prathamg007/Nambikkai_IMU.git)
-    cd Nambikkai_IMU
-    ```
+Per-session plots (Euler angles, quaternions, axis-angle error) are in `logs/`.
 
-2.  **Install Dependencies**
-    It is recommended to use a virtual environment.
-    ```bash
-    pip install -r requirements.txt
-    ```
+## Usage
 
-## Project Structure
+```bash
+pip install -r requirements.txt
 
-├── config.yaml # Hyperparameters (Batch size, LR, Window size)
+# train (config-driven; expects processed CSVs under data/processed)
+python -m src.train --config configs/config.yaml
 
-├── model.py # Bi-LSTM Neural Network Architecture 
-
-├── train.py # Main training loop 
-
-├── eval.py # Inference and evaluation script 
-
-├── dataset_loader_custom.py # PyTorch Dataset for windowed IMU data 
-
-├── data_windowing.py # Preprocessing: Slicing raw data into windows 
-
-├── loss_utils.py # Custom Quaternion Loss functions 
-
-└── plot_utils.py # Visualization tools for trajectories
-
-
-## Configuration (`config.yaml`)
-
-Control the training dynamics by editing `config.yaml`:
-
-```yaml
-training:
-  batch_size: 64
-  learning_rate: 0.001
-  epochs: 100
-
-data:
-  window_size: 200   # Number of time-steps per sample
-  stride: 10         # Overlap between windows
-  input_dim: 6       # 3 Accel + 3 Gyro
+# evaluate a held-out recording
+python -m src.eval --config configs/config.yaml --csv data/test/test_1.csv --out logs/test_1.json
 ```
 
-  Usage
-1. Training the Model
-To train the model on your dataset, run:
-python train.py --config config.yaml
+> `src/` uses package-relative imports — run with `python -m src.train`, not `python src/train.py`.
 
-This will save the best model weights to the checkpoints/ directory.
+Training defaults (`configs/config.yaml`): Adam, LR 5e-4, batch 256, ≤60 epochs, 15% validation split, early stopping + ReduceLROnPlateau, TensorBoard + CSV logging. Best/final weights land in `saved_models/`.
 
-2. Evaluation & Testing
-To evaluate the model on unseen data and visualize the results:
-python eval.py --model_path checkpoints/best_model.pth --input data/test_sequence.csv
+## Data
 
-This will generate trajectory plots comparing the Predicted Orientation vs. Ground Truth.
+The wearable logs **two IMU probes per capture** (P1/P2). `data/script.py` splits raw dual-probe exports into unified per-probe training CSVs (`common_ts_ms, ACC_ts, AX..AZ, GYR_ts, GX..GZ, QUAT_ts, QW..QZ`); 125+ processed recordings were used for training. Sample held-out captures live in `data/test/`.
 
- Model Architecture
-The core model is a Recurrent Neural Network (RNN) specifically designed for sequence-to-sequence regression:
+## Repo layout
 
+```text
+src/                  own pipeline: loader, windowing, model, QME loss, train, eval, plots
+configs/config.yaml   all hyperparameters
+data/                 dual-probe splitter + held-out test CSVs
+logs/                 training curves, TensorBoard runs, per-session evaluation plots/JSON
+saved_models/         best + final .h5 checkpoints
+End-to-End-.../       reference framework (Golroudbari & Sabour) incl. classical AHRS baselines
+```
